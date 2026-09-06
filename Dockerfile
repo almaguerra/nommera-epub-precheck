@@ -32,9 +32,10 @@ COPY server.js ./
 # Ace/Electron refuse de tourner en root ("Running as root without
 # --no-sandbox is not supported") -- trouvaille de l'Etape 0. L'image
 # node officielle fournit deja un utilisateur non-root "node".
-RUN mkdir -p /tmp/precheck-uploads \
-    && chown -R node:node /opt/precheck /tmp/precheck-uploads
-ENV TMPDIR=/tmp/precheck-uploads
+# (Le dossier d'upload temporaire est cree par server.js au demarrage,
+# PAS ici au build -- voir le commentaire dans server.js : /tmp est
+# remonte vide au demarrage reel du conteneur sur Render.)
+RUN chown -R node:node /opt/precheck
 USER node
 
 ENV PORT=10000

@@ -33,12 +33,23 @@ const EPUBCHECK_JAR = process.env.EPUBCHECK_JAR || '/opt/precheck/epubcheck/epub
 const ACE_BIN = process.env.ACE_BIN || '/opt/precheck/node_modules/.bin/ace';
 const XVFB_RUN_BIN = process.env.XVFB_RUN_BIN || 'xvfb-run';
 
+// IMPORTANT : ce dossier doit etre cree ICI, au demarrage du processus, et
+// PAS dans le Dockerfile a la construction de l'image. Sur Render (et la
+// plupart des plateformes conteneurs), /tmp est remonte comme un volume
+// vide a chaque demarrage du conteneur -- tout ce qui a ete cree sous /tmp
+// pendant le build (mkdir dans le Dockerfile) disparait au runtime. C'est
+// exactement le bug rencontre au premier deploiement (ENOENT sur le
+// dossier d'upload) : marche en local (dossier cree a la main avant de
+// lancer node), casse en prod (dossier absent au demarrage reel).
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(os.tmpdir(), 'nommera-precheck-uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
 const app = express();
 app.disable('x-powered-by');
 
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, os.tmpdir()),
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
     // Nom de fichier aleatoire : le nom original choisi par la personne
     // qui upload n'est jamais ecrit sur disque ni journalise.
     filename: (req, file, cb) => cb(null, `${crypto.randomUUID()}.epub`),
