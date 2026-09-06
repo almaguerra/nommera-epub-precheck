@@ -1,0 +1,15 @@
+{
+  "name": "nommera-epub-precheck",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nommera - microservice de pre-controle EPUB (EPUBCheck + Ace by DAISY)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@daisy/ace": "1.4.6",
+    "express": "^4.19.2",
+    "multer": "^2.3.0"
+  }
+}
