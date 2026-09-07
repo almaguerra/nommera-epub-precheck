@@ -176,7 +176,26 @@ app.post('/check', requireApiKey, (req, res) => {
       } else {
         aceRun = await runChild(
           XVFB_RUN_BIN,
-          ['-a', ACE_BIN, '-o', aceWorkDir, '-f', epubPath],
+          [
+            '-a', ACE_BIN,
+            '-o', aceWorkDir,
+            '-f', epubPath,
+            // Ace (bin/ace.js dans @daisy/ace-axe-runner-electron) transmet
+            // tel quel tout argument supplementaire au binaire Electron --
+            // ce sont des switchs Chromium standard, pas des options du CLI
+            // Ace, donc son parseur (meow) les ignore sans erreur.
+            // Necessaires en conteneur (Render, Docker...) : sans
+            // --no-sandbox le processus de rendu ne demarre pas (pas de
+            // binaire chrome-sandbox SUID-root ici) ; sans --disable-gpu /
+            // --disable-software-rasterizer, Chromium tente une
+            // acceleration materielle absente sous Xvfb et le process GPU
+            // boucle en erreur ; --disable-dev-shm-usage evite un crash du
+            // renderer quand /dev/shm est petit (limite Docker par defaut).
+            '--no-sandbox',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--disable-dev-shm-usage',
+          ],
           { timeoutMs: CHILD_TIMEOUT_MS }
         );
         aceJson = await readJsonSafe(path.join(aceWorkDir, 'report.json'));
