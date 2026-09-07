@@ -15,6 +15,7 @@ const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const { construireRapportFr } = require('./rapport-fr');
 
 const PORT = process.env.PORT || 10000;
 const API_KEY = process.env.API_KEY || '';
@@ -153,7 +154,16 @@ app.post('/check', requireApiKey, (req, res) => {
     try {
       const epubcheckRun = await runChild(
         'java',
-        ['-jar', EPUBCHECK_JAR, epubPath, '--json', epubcheckJsonPath],
+        [
+          '-jar', EPUBCHECK_JAR, epubPath,
+          '--json', epubcheckJsonPath,
+          // Etape 2 : EPUBCheck sait produire ses messages nativement en
+          // francais (com/adobe/epubcheck/messages/MessageBundle_fr.properties,
+          // verifie en le testant reellement -- couverture partielle mais
+          // large, avec repli silencieux vers l'anglais pour les quelques
+          // messages non traduits par le projet EPUBCheck lui-meme).
+          '--locale', 'fr',
+        ],
         { timeoutMs: CHILD_TIMEOUT_MS }
       );
       const epubcheckJson = await readJsonSafe(epubcheckJsonPath);
@@ -180,6 +190,11 @@ app.post('/check', requireApiKey, (req, res) => {
             '-a', ACE_BIN,
             '-o', aceWorkDir,
             '-f', epubPath,
+            // Etape 2 : locale francaise native d'Ace (axe-core embarque un
+            // fichier de traduction officiel complet, @daisy/axe-core-for-ace/
+            // locales/fr.json -- verifie en le testant reellement : messages,
+            // aides et resumes de correction sont bien en francais).
+            '-l', 'fr',
             // Ace (bin/ace.js dans @daisy/ace-axe-runner-electron) transmet
             // tel quel tout argument supplementaire au binaire Electron --
             // ce sont des switchs Chromium standard, pas des options du CLI
@@ -213,6 +228,22 @@ app.post('/check', requireApiKey, (req, res) => {
         }
       }
 
+      const aceMetaOut = aceRun
+        ? { exit_code: aceRun.code, timed_out: aceRun.timedOut }
+        : { skipped: true, reason: aceSkippedReason };
+
+      // Etape 2 : rapport lisible en francais, construit a partir des
+      // memes resultats bruts (voir rapport-fr.js). Protege par un
+      // try/catch expres : c'est la partie neuve du service, elle ne doit
+      // jamais faire echouer une reponse dont la partie brute (deja
+      // eprouvee, Etape 1) a reussi -- au pire rapport_fr est absent.
+      let rapportFr = null;
+      try {
+        rapportFr = construireRapportFr(epubcheckJson, epubcheckRun, aceJson, aceMetaOut);
+      } catch (rapportErr) {
+        console.error('[rapport_fr] echec de construction :', rapportErr && rapportErr.stack || rapportErr);
+      }
+
       return res.json({
         analyzed_at: new Date().toISOString(),
         duration_ms: Date.now() - startedAt,
@@ -223,9 +254,14 @@ app.post('/check', requireApiKey, (req, res) => {
           timed_out: epubcheckRun.timedOut,
         },
         ace: aceJson,
-        ace_meta: aceRun
-          ? { exit_code: aceRun.code, timed_out: aceRun.timedOut }
-          : { skipped: true, reason: aceSkippedReason },
+        ace_meta: aceMetaOut,
+        // Rapport gratuit = verdict + synthese + categories (sans detail).
+        // Rapport payant = tout ce qui precede + le tableau "detail"
+        // complet. C'est au site (Etape 3/4, pas encore construit) de
+        // decider quoi afficher/envoyer selon que la personne a paye --
+        // ce microservice reste sans notion de paiement, il fournit juste
+        // les deux niveaux de contenu prets a l'emploi.
+        rapport_fr: rapportFr,
       });
     } catch (e) {
       // Ne jamais renvoyer le detail interne (stack, chemins) au client.
