@@ -49,7 +49,7 @@ RUN sed -i 's/const CONCURRENT_INSTANCES = 4;/const CONCURRENT_INSTANCES = 1;/' 
     && grep -q 'const CONCURRENT_INSTANCES = 1;' \
         node_modules/@daisy/ace-axe-runner-electron/lib/cli.js
 
-COPY server.js ./
+COPY server.js rapport-fr.js ./
 
 # Ace/Electron refuse de tourner en root ("Running as root without
 # --no-sandbox is not supported") -- trouvaille de l'Etape 0. L'image
