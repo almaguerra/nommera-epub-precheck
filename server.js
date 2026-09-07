@@ -180,6 +180,18 @@ app.post('/check', requireApiKey, (req, res) => {
           { timeoutMs: CHILD_TIMEOUT_MS }
         );
         aceJson = await readJsonSafe(path.join(aceWorkDir, 'report.json'));
+        // Diagnostic (temporaire) : si Ace echoue, on veut voir pourquoi dans
+        // les logs Render -- le JSON de reponse ne contient que le code de
+        // sortie, pas le message d'erreur reel du process.
+        if (aceRun.code !== 0 || !aceJson) {
+          console.error(
+            '[ace] echec -- exit_code=%s timed_out=%s\n--- stderr ---\n%s\n--- stdout ---\n%s',
+            aceRun.code,
+            aceRun.timedOut,
+            aceRun.stderr,
+            aceRun.stdout
+          );
+        }
       }
 
       return res.json({
