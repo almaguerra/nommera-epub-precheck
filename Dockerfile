@@ -8,7 +8,7 @@ FROM node:20-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-17-jre-headless \
         wget unzip ca-certificates \
-        xvfb dbus-x11 \
+        xvfb dbus-x11 xauth \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/precheck
