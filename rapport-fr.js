@@ -48,7 +48,18 @@ const EPUBCHECK_PREFIX_CATEGORIE = {
   NAV: 'navigation', // NAV-011 (ordre de lecture) est une exception ci-dessous
   NCX: 'navigation',
   OPF: 'metadonnees', // les codes spine/reading-order sont une exception ci-dessous
-  PKG: 'metadonnees',
+  // Correctif 2026-09-07 -- PKG etait classe "metadonnees" par erreur (le
+  // mapping par prefixe avait ete fait en se basant sur le decoupage du
+  // fichier officiel MessageBundle.properties sans verifier chaque section
+  // individuellement, contrairement aux exceptions OPF/NAV ci-dessous qui,
+  // elles, ont ete verifiees une par une). Confirme sur un vrai rapport de
+  // production (PKG-026, "Obfuscated resource must be a Font Core Media
+  // Type") : les codes PKG concernent la structure du paquet OCF lui-meme
+  // (mimetype, container.xml, structure du zip, obfuscation de polices,
+  // signatures) -- c'est de la structure/emballage, pas des metadonnees
+  // editoriales (titre, auteur, langue...) au sens ou Elena l'entend sur
+  // les pages du tunnel.
+  PKG: 'structure',
   RSC: 'structure',
   INF: 'technique',
   CHK: 'technique',
