@@ -34,6 +34,21 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 
+# Ace ouvre par defaut 4 fenetres Chromium EN PARALLELE pour analyser les
+# documents d'un EPUB (CONCURRENT_INSTANCES, code en dur, aucune option CLI
+# ni variable d'environnement pour le changer -- verifie en lisant le
+# paquet). Sur les 512 Mo du plan Free de Render, 4 rendus Chromium
+# simultanes (meme sans GPU) depassent tres probablement la limite memoire
+# et le noyau tue silencieusement des processus -- d'ou l'echec observe
+# (did-fail-load: -3 / ERR_ABORTED) apres avoir deja resolu xauth, les
+# librairies systeme et le GPU. On repasse ce paquet installe en analyse
+# sequentielle (1 fenetre a la fois) : plus lent, mais tient dans la RAM
+# disponible. A revoir a la hausse si le plan Render change.
+RUN sed -i 's/const CONCURRENT_INSTANCES = 4;/const CONCURRENT_INSTANCES = 1;/' \
+        node_modules/@daisy/ace-axe-runner-electron/lib/cli.js \
+    && grep -q 'const CONCURRENT_INSTANCES = 1;' \
+        node_modules/@daisy/ace-axe-runner-electron/lib/cli.js
+
 COPY server.js ./
 
 # Ace/Electron refuse de tourner en root ("Running as root without
